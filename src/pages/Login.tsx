@@ -52,6 +52,9 @@ const Login = () => {
       const res = await API.post('/auth/vendor/login', payload);
 
       if (res.data.success) {
+        if (res.data.data?.token) {
+          localStorage.setItem('vendor_token', res.data.data.token);
+        }
         loginUser(res.data.data.user);
         Swal.fire({
           title: 'Success!',

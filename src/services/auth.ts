@@ -11,11 +11,12 @@ export const loginUser = (user: AuthUser) => {
 };
 
 export const logoutUser = () => {
+  localStorage.removeItem("vendor_token");
   localStorage.removeItem("user");
 };
 
 export const isAuthenticated = (): boolean => {
-  return !!localStorage.getItem("user");
+  return !!localStorage.getItem("user") || !!localStorage.getItem("vendor_token");
 };
 
 export const getCurrentUser = (): AuthUser | null => {
