@@ -54,7 +54,7 @@ const AddProduct = () => {
       title: formData.title || 'Untitled Product',
       category: formData.category || 'Uncategorized',
       price: vendorPrice,
-      admin_commission: adminCommission,
+      admin_commission: commissionPct,
       stock: parseInt(formData.stock, 10) || 0,
       offer: parseFloat(formData.discount) || 0,
       status: 'Active',
@@ -160,6 +160,7 @@ const AddProduct = () => {
                 <input
                   type="number"
                   min="0"
+                  max="100"
                   className="form-control"
                   name="adminCommissionPct"
                   value={formData.adminCommissionPct}

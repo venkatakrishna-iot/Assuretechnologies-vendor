@@ -378,9 +378,10 @@ const Products = () => {
                   
                   {(() => {
                     const editVendorPrice = parseFloat(editFormData.price) || 0;
-                    const editAdminCommission = parseFloat(editFormData.admin_commission) || 0;
+                    const editCommissionPct = parseFloat(editFormData.admin_commission) || 0;
                     const editDiscountPct = parseFloat(editFormData.offer) || 0;
                     
+                    const editAdminCommission = editVendorPrice * (editCommissionPct / 100);
                     const editOriginalPrice = editVendorPrice + editAdminCommission;
                     const editVendorDiscountedPrice = editVendorPrice * (1 - (editDiscountPct / 100));
                     const editFinalSellingPrice = editVendorDiscountedPrice + editAdminCommission;
@@ -472,10 +473,12 @@ const Products = () => {
                   
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Admin Comm. (₹)</label>
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>Admin Comm. (%)</label>
                       <input 
                         type="number" 
                         step="0.01" 
+                        min="0"
+                        max="100"
                         className="form-control" 
                         name="admin_commission"
                         value={editFormData.admin_commission}
