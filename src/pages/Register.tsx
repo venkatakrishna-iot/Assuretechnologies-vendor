@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../services/api';
 import Swal from 'sweetalert2';
+import { GST_STATE_CODES, getGstStateCode } from '../data/gstStateCodes';
 import './Login.css'; // Reuse Login.css styles
 
 export default function Register() {
@@ -13,15 +14,49 @@ export default function Register() {
     email: '',
     password: '',
     address: '',
-    gst_number: ''
+    gst_number: '',
+    gst_state_code: '37'
   });
 
   const [errors, setErrors] = useState<any>({});
   const [loading, setLoading] = useState(false);
 
+  const handleStateCodeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCode = e.target.value;
+    setFormData(prev => {
+      let updatedGst = prev.gst_number;
+      if (!updatedGst) {
+        updatedGst = newCode;
+      } else if (updatedGst.length >= 2) {
+        updatedGst = newCode + updatedGst.slice(2);
+      } else {
+        updatedGst = newCode;
+      }
+      return {
+        ...prev,
+        gst_state_code: newCode,
+        gst_number: updatedGst
+      };
+    });
+    setErrors((prev: any) => ({ ...prev, gst_number: '' }));
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setErrors({ ...errors, [e.target.name]: '' }); // Clear error on change
+    const { name, value } = e.target;
+    let newValue = value;
+    if (name === 'gst_number') {
+      newValue = value.toUpperCase();
+      if (newValue.length >= 2) {
+        const detected = getGstStateCode(newValue.slice(0, 2));
+        if (detected) {
+          setFormData(prev => ({ ...prev, gst_number: newValue, gst_state_code: detected }));
+          setErrors((prev: any) => ({ ...prev, [name]: '' }));
+          return;
+        }
+      }
+    }
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+    setErrors((prev: any) => ({ ...prev, [name]: '' })); // Clear error on change
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,18 +163,38 @@ export default function Register() {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="gst_number">GST Number</label>
-            <input
-              type="text"
-              id="gst_number"
-              name="gst_number"
-              placeholder="15-character GSTIN"
-              value={formData.gst_number}
-              onChange={handleChange}
-              required
-            />
-            {errors.gst_number && <span className="error-text">{errors.gst_number}</span>}
+          <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="form-group">
+              <label htmlFor="gst_state_code">GST State Code</label>
+              <select
+                id="gst_state_code"
+                name="gst_state_code"
+                value={formData.gst_state_code}
+                onChange={handleStateCodeChange}
+                style={{ width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}
+              >
+                {GST_STATE_CODES.map(s => (
+                  <option key={s.code} value={s.code}>
+                    {s.code} - {s.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="gst_number">GST Number</label>
+              <input
+                type="text"
+                id="gst_number"
+                name="gst_number"
+                placeholder="15-character GSTIN"
+                value={formData.gst_number}
+                onChange={handleChange}
+                maxLength={15}
+                required
+              />
+              {errors.gst_number && <span className="error-text">{errors.gst_number}</span>}
+            </div>
           </div>
 
           <div className="form-group">

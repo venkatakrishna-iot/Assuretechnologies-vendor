@@ -5,6 +5,7 @@ import {
   MdInventory,
   MdOutlineShoppingBag,
   MdListAlt,
+  MdReceiptLong,
   MdPerson,
   MdLogout
 } from 'react-icons/md';
@@ -61,6 +62,11 @@ const Layout = () => {
           <li className="nav-item">
             <NavLink to="/orders" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
               <MdOutlineShoppingBag className="nav-icon" /> Orders
+            </NavLink>
+          </li>
+          <li className="nav-item">
+            <NavLink to="/invoices" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+              <MdReceiptLong className="nav-icon" /> Invoices
             </NavLink>
           </li>
           <li className="nav-item">

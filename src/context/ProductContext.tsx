@@ -11,6 +11,7 @@ export interface Product {
   category: string;
   price: number;
   offer: number;
+  tax_slab?: number;
   admin_commission?: number;
   stock: number;
   description?: string;
@@ -54,6 +55,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
         category: p.category,
         price: p.base_price,
         offer: p.discount,
+        tax_slab: p.tax_slab != null ? Number(p.tax_slab) : 18,
         admin_commission: p.admin_commission,
         stock: p.stock,
         description: p.description || '',
@@ -74,6 +76,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
       formData.append('name', newProduct.title);
       formData.append('category', newProduct.category);
       formData.append('base_price', newProduct.price.toString());
+      if (newProduct.tax_slab !== undefined) formData.append('tax_slab', newProduct.tax_slab.toString());
       if (newProduct.admin_commission !== undefined) formData.append('admin_commission', newProduct.admin_commission.toString());
       formData.append('stock', newProduct.stock.toString());
       formData.append('discount', newProduct.offer.toString());
@@ -104,6 +107,7 @@ export const ProductProvider: React.FC<{ children: ReactNode }> = ({ children })
       if (updatedFields.category) formData.append('category', updatedFields.category);
       if (updatedFields.price !== undefined) formData.append('base_price', updatedFields.price.toString());
       if (updatedFields.offer !== undefined) formData.append('discount', updatedFields.offer.toString());
+      if (updatedFields.tax_slab !== undefined) formData.append('tax_slab', updatedFields.tax_slab.toString());
       if (updatedFields.stock !== undefined) formData.append('stock', updatedFields.stock.toString());
       if (updatedFields.admin_commission !== undefined) formData.append('admin_commission', updatedFields.admin_commission.toString());
       if (updatedFields.description !== undefined) formData.append('description', updatedFields.description);

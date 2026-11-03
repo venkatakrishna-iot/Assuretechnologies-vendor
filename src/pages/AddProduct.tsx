@@ -13,6 +13,7 @@ const AddProduct = () => {
     description: '',
     price: '',
     discount: '',
+    tax_slab: '18',
     adminCommissionPct: '10',
     stock: '',
     image: 'https://placehold.co/60x40/png',
@@ -39,11 +40,18 @@ const AddProduct = () => {
   const vendorPrice = parseFloat(formData.price) || 0;
   const commissionPct = parseFloat(formData.adminCommissionPct) || 0;
   const discountPct = parseFloat(formData.discount) || 0;
+  const taxSlab = parseFloat(formData.tax_slab) || 0;
   
   const adminCommission = vendorPrice * (commissionPct / 100);
-  const originalPrice = vendorPrice + adminCommission;
   const vendorDiscountedPrice = vendorPrice * (1 - (discountPct / 100));
-  const finalSellingPrice = vendorDiscountedPrice + adminCommission;
+  const sellingPriceExclTax = vendorDiscountedPrice + adminCommission;
+  const originalPriceExclTax = vendorPrice + adminCommission;
+
+  const taxAmount = sellingPriceExclTax * (taxSlab / 100);
+  const originalTaxAmount = originalPriceExclTax * (taxSlab / 100);
+
+  const finalSellingPrice = sellingPriceExclTax + taxAmount;
+  const originalPrice = originalPriceExclTax + originalTaxAmount;
   const vendorPayout = vendorDiscountedPrice;
 
   const handleSave = (e: React.FormEvent) => {
@@ -55,6 +63,7 @@ const AddProduct = () => {
       category: formData.category || 'Uncategorized',
       price: vendorPrice,
       admin_commission: commissionPct,
+      tax_slab: parseInt(formData.tax_slab, 10) || 18,
       stock: parseInt(formData.stock, 10) || 0,
       offer: parseFloat(formData.discount) || 0,
       status: 'Active',
@@ -170,19 +179,27 @@ const AddProduct = () => {
               </div>
               <div className="form-group col-half">
                 <label>Pricing Breakdown</label>
-                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: '#64748b' }}>Original Price (Frontend):</span>
-                    <span style={{ fontWeight: '500', textDecoration: 'line-through' }}>₹{originalPrice.toFixed(2)}</span>
+                <div style={{ backgroundColor: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>Selling Price (Excl. Tax):</span>
+                    <span style={{ fontWeight: '500', color: '#1e293b' }}>₹{sellingPriceExclTax.toFixed(2)}</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                    <span style={{ color: '#64748b' }}>Final Selling Price:</span>
-                    <span style={{ fontWeight: 'bold', color: '#10b981' }}>₹{finalSellingPrice.toFixed(2)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: '#64748b' }}>GST ({taxSlab}%):</span>
+                    <span style={{ fontWeight: '500', color: '#64748b' }}>+₹{taxAmount.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: '#0f766e', fontWeight: '600' }}>Final Customer Price (Frontend):</span>
+                    <span style={{ fontWeight: 'bold', color: '#0f766e', fontSize: '1rem' }}>₹{finalSellingPrice.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ color: '#94a3b8' }}>Original Price (Frontend):</span>
+                    <span style={{ fontWeight: '500', color: '#94a3b8', textDecoration: 'line-through' }}>₹{originalPrice.toFixed(2)}</span>
                   </div>
                   <div style={{ borderTop: '1px solid #e2e8f0', margin: '8px 0' }}></div>
                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                     <span style={{ color: '#475569', fontWeight: '500' }}>Your Payout:</span>
-                    <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>₹{vendorPayout.toFixed(2)}</span>
+                    <span style={{ fontWeight: 'bold', color: '#2563eb' }}>₹{vendorPayout.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -200,6 +217,21 @@ const AddProduct = () => {
                   onChange={handleChange}
                   required
                 />
+              </div>
+              <div className="form-group col-half">
+                <label>GST Tax Slab</label>
+                <select
+                  className="form-control"
+                  name="tax_slab"
+                  value={formData.tax_slab}
+                  onChange={handleChange}
+                >
+                  <option value="0">0% GST</option>
+                  <option value="5">5% GST</option>
+                  <option value="12">12% GST</option>
+                  <option value="18">18% GST (Standard)</option>
+                  <option value="28">28% GST</option>
+                </select>
               </div>
             </div>
 

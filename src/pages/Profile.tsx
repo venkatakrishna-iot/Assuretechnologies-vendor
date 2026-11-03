@@ -7,6 +7,7 @@ import { getProfile, updateProfile } from '../services/vendorApi';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { GST_STATE_CODES, getGstStateCode } from '../data/gstStateCodes';
 
 const profileSchema = z.object({
   name: z.string().min(3, 'Contact Person must be at least 3 characters'),
@@ -14,6 +15,7 @@ const profileSchema = z.object({
   mobile: z.string().optional(),
   email: z.string().optional(),
   gstNumber: z.string().length(15, 'GST number must be exactly 15 characters'),
+  gstStateCode: z.string().optional(),
   address: z.string().min(3, 'Address must be at least 3 characters'),
   pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional().or(z.literal('')),
   businessDescription: z.string().optional().or(z.literal(''))
@@ -31,6 +33,8 @@ const Profile = () => {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors }
   } = useForm<ProfileFormValues>({
     resolver: zodResolver(profileSchema),
@@ -40,11 +44,14 @@ const Profile = () => {
       mobile: '',
       email: '',
       gstNumber: '',
+      gstStateCode: '37',
       address: '',
       pincode: '',
       businessDescription: ''
     }
   });
+
+  const selectedStateCode = watch('gstStateCode') || '37';
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -52,12 +59,15 @@ const Profile = () => {
         const res = await getProfile();
         const data = res?.data || res;
         setOriginalName(data.business_name || 'Business Name');
+        const gstNum = data.gst_number || '';
+        const stateCode = data.gst_state_code || getGstStateCode(gstNum) || '37';
         reset({
           name: data.full_name || '',
           businessName: data.business_name || '',
           email: data.email || '',
           mobile: data.mobile || '',
-          gstNumber: data.gst_number || '',
+          gstNumber: gstNum,
+          gstStateCode: stateCode,
           address: data.address || '',
           pincode: data.pincode || '',
           businessDescription: data.business_description || ''
@@ -74,14 +84,16 @@ const Profile = () => {
   const onSubmit = async (data: ProfileFormValues) => {
     setSaving(true);
     try {
+      const stateCode = data.gstStateCode || (data.gstNumber ? data.gstNumber.slice(0, 2) : '37');
       await updateProfile({
         full_name: data.name,
         business_name: data.businessName,
         gst_number: data.gstNumber,
+        gst_state_code: stateCode,
         address: data.address,
         pincode: data.pincode,
         business_description: data.businessDescription
-      });
+      } as any);
       setOriginalName(data.businessName);
       Swal.fire({
         icon: 'success',
@@ -193,10 +205,43 @@ const Profile = () => {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label className="form-label fw-medium mb-1">GST State Code</label>
+                  <select
+                    className="form-control"
+                    value={selectedStateCode}
+                    disabled={!isEditing}
+                    onChange={(e) => {
+                      const newCode = e.target.value;
+                      setValue('gstStateCode', newCode);
+                      const currentGst = watch('gstNumber') || '';
+                      if (!currentGst) {
+                        setValue('gstNumber', newCode);
+                      } else if (currentGst.length >= 2) {
+                        setValue('gstNumber', newCode + currentGst.slice(2));
+                      }
+                    }}
+                  >
+                    {GST_STATE_CODES.map(s => (
+                      <option key={s.code} value={s.code}>
+                        {s.code} - {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
                   <label className="form-label fw-medium mb-1">GST Number</label>
                   <input type="text" autoComplete="none"
                     className={`form-control text-uppercase ${errors.gstNumber ? 'input-error' : ''}`}
-                    {...register('gstNumber')}
+                    {...register('gstNumber', {
+                      onChange: (e) => {
+                        const val = e.target.value.toUpperCase();
+                        if (val.length >= 2) {
+                          const detected = getGstStateCode(val.slice(0, 2));
+                          if (detected) setValue('gstStateCode', detected);
+                        }
+                      }
+                    })}
                     readOnly={!isEditing}
                   />
                   {errors.gstNumber && <span className="error-text">{errors.gstNumber.message}</span>}

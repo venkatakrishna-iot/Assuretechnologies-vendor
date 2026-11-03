@@ -21,6 +21,7 @@ const Products = () => {
     category: '',
     offer: '',
     stock: '',
+    tax_slab: '18',
     description: '',
     admin_commission: ''
   });
@@ -61,6 +62,7 @@ const Products = () => {
       category: product.category,
       offer: product.offer.toString(),
       stock: product.stock.toString(),
+      tax_slab: product.tax_slab != null ? product.tax_slab.toString() : '18',
       description: product.description || '',
       admin_commission: product.admin_commission ? product.admin_commission.toString() : ''
     });
@@ -94,6 +96,7 @@ const Products = () => {
         category: editFormData.category,
         offer: parseFloat(editFormData.offer) || 0,
         stock: parseInt(editFormData.stock, 10) || 0,
+        tax_slab: parseInt(editFormData.tax_slab, 10) || 18,
         description: editFormData.description,
         admin_commission: parseFloat(editFormData.admin_commission) || 0,
         ...(imageFile && { image: imageFile })
@@ -227,6 +230,7 @@ const Products = () => {
               <th>Category</th>
               <th>Price</th>
               <th>Discount (%)</th>
+              <th>GST Slab</th>
               <th>Stock</th>
               <th>Status</th>
               <th>Actions</th>
@@ -257,6 +261,11 @@ const Products = () => {
                   <td>{product.category}</td>
                   <td>₹{product.price.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                   <td>{product.offer}%</td>
+                  <td>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', background: '#f1f5f9', padding: '2px 8px', borderRadius: '4px' }}>
+                      {product.tax_slab != null ? `${product.tax_slab}%` : '18%'}
+                    </span>
+                  </td>
                   <td>
                     <div className="d-flex align-items-center" style={{ gap: '4px' }}>
                       <input 
@@ -380,28 +389,48 @@ const Products = () => {
                     const editVendorPrice = parseFloat(editFormData.price) || 0;
                     const editCommissionPct = parseFloat(editFormData.admin_commission) || 0;
                     const editDiscountPct = parseFloat(editFormData.offer) || 0;
+                    const editTaxSlab = parseFloat(editFormData.tax_slab) || 0;
                     
                     const editAdminCommission = editVendorPrice * (editCommissionPct / 100);
-                    const editOriginalPrice = editVendorPrice + editAdminCommission;
                     const editVendorDiscountedPrice = editVendorPrice * (1 - (editDiscountPct / 100));
-                    const editFinalSellingPrice = editVendorDiscountedPrice + editAdminCommission;
+                    const editSellingPriceExclTax = editVendorDiscountedPrice + editAdminCommission;
+                    const editOriginalPriceExclTax = editVendorPrice + editAdminCommission;
+
+                    const editTaxAmount = editSellingPriceExclTax * (editTaxSlab / 100);
+                    const editOriginalTaxAmount = editOriginalPriceExclTax * (editTaxSlab / 100);
+
+                    const editFinalSellingPrice = editSellingPriceExclTax + editTaxAmount;
+                    const editOriginalPrice = editOriginalPriceExclTax + editOriginalTaxAmount;
                     const editVendorPayout = editVendorDiscountedPrice;
 
                     return (
-                      <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', marginBottom: '8px' }}>
-                        <div style={{ fontWeight: 600, color: '#475569', marginBottom: '8px' }}>Pricing Breakdown</div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ color: '#64748b' }}>Original Price (Frontend):</span>
-                          <span style={{ fontWeight: '500', textDecoration: 'line-through' }}>₹{editOriginalPrice.toFixed(2)}</span>
+                      <div style={{ backgroundColor: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '0.9rem', marginBottom: '8px' }}>
+                        <div style={{ fontWeight: 600, color: '#334155', marginBottom: '10px', fontSize: '0.95rem' }}>Pricing Breakdown</div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ color: '#64748b' }}>Selling Price (Excl. Tax):</span>
+                          <span style={{ fontWeight: '500', color: '#1e293b' }}>₹{editSellingPriceExclTax.toFixed(2)}</span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                          <span style={{ color: '#64748b' }}>Final Selling Price:</span>
-                          <span style={{ fontWeight: 'bold', color: '#10b981' }}>₹{editFinalSellingPrice.toFixed(2)}</span>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ color: '#64748b' }}>GST ({editTaxSlab}%):</span>
+                          <span style={{ fontWeight: '500', color: '#64748b' }}>+₹{editTaxAmount.toFixed(2)}</span>
                         </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ color: '#0f766e', fontWeight: '600' }}>Final Customer Price (Frontend):</span>
+                          <span style={{ fontWeight: 'bold', color: '#0f766e', fontSize: '1rem' }}>₹{editFinalSellingPrice.toFixed(2)}</span>
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                          <span style={{ color: '#94a3b8' }}>Original Price (Frontend):</span>
+                          <span style={{ fontWeight: '500', color: '#94a3b8', textDecoration: 'line-through' }}>₹{editOriginalPrice.toFixed(2)}</span>
+                        </div>
+
                         <div style={{ borderTop: '1px solid #e2e8f0', margin: '8px 0' }}></div>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span style={{ color: '#475569', fontWeight: '500' }}>Your Payout:</span>
-                          <span style={{ fontWeight: 'bold', color: '#3b82f6' }}>₹{editVendorPayout.toFixed(2)}</span>
+                          <span style={{ fontWeight: 'bold', color: '#2563eb' }}>₹{editVendorPayout.toFixed(2)}</span>
                         </div>
                       </div>
                     );
@@ -487,7 +516,20 @@ const Products = () => {
                       />
                     </div>
                     <div>
-                      {/* Empty column to keep grid layout intact */}
+                      <label style={{ display: 'block', fontSize: '0.85rem', color: '#475569', fontWeight: 600, marginBottom: '6px' }}>GST Tax Slab</label>
+                      <select
+                        className="form-control"
+                        name="tax_slab"
+                        value={editFormData.tax_slab}
+                        onChange={handleEditChange as any}
+                        style={{ padding: '10px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', width: '100%', background: '#f8fafc' }}
+                      >
+                        <option value="0">0% GST</option>
+                        <option value="5">5% GST</option>
+                        <option value="12">12% GST</option>
+                        <option value="18">18% GST (Standard)</option>
+                        <option value="28">28% GST</option>
+                      </select>
                     </div>
                   </div>
 

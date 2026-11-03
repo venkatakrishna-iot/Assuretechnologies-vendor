@@ -11,6 +11,7 @@ import AddProduct from './pages/AddProduct';
 import Products from './pages/Products';
 import Orders from './pages/Orders';
 import Inventory from './pages/Inventory';
+import Invoices from './pages/Invoices';
 import Profile from './pages/Profile';
 import TrackOrder from './pages/TrackOrder';
 import { ProductProvider } from './context/ProductContext';
@@ -34,6 +35,7 @@ function App() {
                 <Route path="/add-product" element={<AddProduct />} />
                 <Route path="/products" element={<Products />} />
                 <Route path="/orders" element={<Orders />} />
+                <Route path="/invoices" element={<Invoices />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/track-order/:id" element={<TrackOrder />} />
