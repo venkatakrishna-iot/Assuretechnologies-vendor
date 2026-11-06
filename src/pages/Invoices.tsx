@@ -5,6 +5,7 @@ import { MdSearch, MdVisibility, MdDownload, MdArrowBack } from 'react-icons/md'
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { isSameStateAsCompany } from '../data/gstStateCodes';
+import Pagination from '../components/Pagination';
 import './Invoices.css';
 
 interface InvoiceItem {
@@ -46,7 +47,9 @@ export default function Invoices() {
   const [invoices, setInvoices] = useState<VendorInvoice[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [viewingInvoice, setViewingInvoice] = useState<VendorInvoice | null>(null);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchVendorInvoices();
@@ -216,9 +219,21 @@ export default function Invoices() {
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const imgHeight = (canvas.height * pdfWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position -= pageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
       pdf.save(`Invoice_${invoiceNumber}.pdf`);
     } catch (err) {
       console.error('Failed to generate PDF', err);
@@ -239,6 +254,12 @@ export default function Invoices() {
     );
   });
 
+  const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage) || 1;
+  const paginatedInvoices = filteredInvoices.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
   return (
     <div className="invoices-page">
       {!viewingInvoice ? (
@@ -254,7 +275,10 @@ export default function Invoices() {
                 type="text"
                 placeholder="Search by Invoice No, Order ID..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
               />
             </div>
           </div>
@@ -283,7 +307,7 @@ export default function Invoices() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((inv) => (
+                  {paginatedInvoices.map((inv) => (
                     <tr key={inv.id}>
                       <td><strong>{inv.invoiceNumber}</strong></td>
                       <td>{inv.orderId}</td>
@@ -324,6 +348,13 @@ export default function Invoices() {
                   ))}
                 </tbody>
               </table>
+            )}
+            {!isLoading && filteredInvoices.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             )}
           </div>
         </>
@@ -464,6 +495,33 @@ export default function Invoices() {
                 </div>
               );
             })()}
+
+            {/* Component Warranty Conditions */}
+            <div className="invoice-warranty-section">
+              <h5 className="invoice-warranty-title">Component Warranty Conditions</h5>
+              <ul className="invoice-warranty-list">
+                <li>
+                  <strong>Manufacturer Warranty:</strong> Hardware components (cameras, NVRs/DVRs, hard drives) carry a 1-to-3-year manufacturer warranty from the date of purchase. The installer acts as the facilitator for these claims.
+                </li>
+                <li>
+                  <strong>Workmanship/Labor Warranty:</strong> Installation labor is typically covered for 90 days to 1 year. This covers faulty wiring, loose mounts, or incorrect configuration by the technicians.
+                </li>
+                <li>
+                  <strong>Warranty Exclusions:</strong> The warranty is strictly void under the following conditions:
+                  <ul className="invoice-warranty-sublist">
+                    <li>Damage caused by lightning strikes, power surges, floods, or acts of God.</li>
+                    <li>Vandalism, physical tampering, or unauthorized relocation of cameras.</li>
+                    <li>Modifications to software settings, network routing, or firmware updates done by the client or a third party.</li>
+                  </ul>
+                </li>
+                <li>
+                  <strong>Consumables Exclusion:</strong> Cables, connectors, power adapters, and batteries are generally excluded from long-term warranties or carry a heavily reduced coverage period (e.g., 90 days).
+                </li>
+                <li>
+                  <strong>Advance Replacement Policy:</strong> Defective components must be tested and verified before a replacement is issued. Loaner cameras during the manufacturer repair window are not included unless a separate Annual Maintenance Contract (AMC) is signed.
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       )}
