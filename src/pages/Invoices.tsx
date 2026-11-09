@@ -79,31 +79,40 @@ export default function Invoices() {
         const invRes = await API.get('/invoices/vendor');
         if (invRes.data?.data && Array.isArray(invRes.data.data)) {
           loadedInvoices = invRes.data.data.map((inv: any) => {
-            const rawItems: InvoiceItem[] = (inv.items || []).map((i: any) => ({
-              id: i.id || String(Math.random()),
-              description: i.description || 'Product',
-              qty: i.qty || 1,
-              rate: parseFloat(i.rate) || 0,
-              amount: parseFloat(i.amount) || (i.qty * i.rate) || 0,
-              warranty: i.warranty || '',
-              modelNumber: i.model_number || '',
-              hsnCode: i.hsn_code || '',
-              serialNumbers: (() => {
-                let sn = i.serial_numbers;
-                if (typeof sn === 'string') {
-                  try {
-                    sn = JSON.parse(sn);
-                  } catch {
-                    sn = sn.split(',').map((s: string) => s.trim()).filter(Boolean);
-                  }
-                }
-                return Array.isArray(sn) ? sn : (typeof sn === 'string' ? [sn] : []);
-              })()
-            }));
+            const slab = parseFloat(inv.gst_percent) || 18;
+            const rawItems: InvoiceItem[] = (inv.items || []).map((i: any) => {
+              const qty = parseInt(i.qty, 10) || 1;
+              const rawRate = parseFloat(i.rate) || 0;
+              const rawAmount = parseFloat(i.amount) || 0;
 
-            const itemsTotal = rawItems.reduce((acc, curr) => acc + curr.amount, 0);
-            const backendGrandTotal = parseFloat(inv.grand_total);
-            const grandTotal = backendGrandTotal > 0 ? backendGrandTotal : (itemsTotal * 1.18);
+              const rateIncl = rawRate;
+              const rateExcl = rawAmount > 0 ? (rawAmount / qty) : (rateIncl / (1 + (slab / 100)));
+              const amount = rawAmount > 0 ? rawAmount : parseFloat((rateExcl * qty).toFixed(2));
+
+              return {
+                id: i.id || String(Math.random()),
+                description: i.description || 'Product',
+                qty,
+                rate: parseFloat(rateIncl.toFixed(2)),
+                amount: parseFloat(amount.toFixed(2)),
+                warranty: i.warranty || '',
+                modelNumber: i.model_number || '',
+                hsnCode: i.hsn_code || '',
+                serialNumbers: (() => {
+                  let sn = i.serial_numbers;
+                  if (typeof sn === 'string') {
+                    try {
+                      sn = JSON.parse(sn);
+                    } catch {
+                      sn = sn.split(',').map((s: string) => s.trim()).filter(Boolean);
+                    }
+                  }
+                  return Array.isArray(sn) ? sn : (typeof sn === 'string' ? [sn] : []);
+                })()
+              };
+            });
+
+            const grandTotal = rawItems.reduce((acc, curr) => acc + (curr.rate * curr.qty), 0);
             const gstPercent = parseFloat(inv.gst_percent) || 18;
 
             return {
@@ -151,8 +160,9 @@ export default function Invoices() {
               const unitPayout = (i.vendor_payout != null && qty > 0)
                 ? (parseFloat(i.vendor_payout) / qty)
                 : (vendorBase * (1 - (discPct / 100)));
-              const itemPayoutAmount = parseFloat((unitPayout * qty).toFixed(2));
-              const rateIncl = parseFloat((unitPayout * (1 + (slab / 100))).toFixed(2));
+              const rateIncl = parseFloat(unitPayout.toFixed(2));
+              const rateExcl = parseFloat((rateIncl / (1 + (slab / 100))).toFixed(2));
+              const itemPayoutAmount = parseFloat((rateExcl * qty).toFixed(2));
 
               return {
                 id: i.id || String(Math.random()),
@@ -167,9 +177,7 @@ export default function Invoices() {
               };
             });
 
-            const itemsTotal = rawItems.reduce((acc, curr) => acc + curr.amount, 0);
-            const totalTax = rawItems.reduce((acc, curr) => acc + (curr.amount * 0.18), 0);
-            const grandTotal = parseFloat((itemsTotal + totalTax).toFixed(2));
+            const grandTotal = rawItems.reduce((acc, curr) => acc + (curr.rate * curr.qty), 0);
 
             return {
               id: o.id || o.order_number,
@@ -428,12 +436,9 @@ export default function Invoices() {
               <tbody>
                 {viewingInvoice.items.map((item, idx) => {
                   const qty = item.qty || 1;
-                  const rateExcl = (item.amount && item.amount < (item.rate * qty))
-                    ? (item.amount / qty)
-                    : item.rate;
-                  const rateIncl = (item.rate > rateExcl)
-                    ? item.rate
-                    : (rateExcl * 1.18);
+                  const slab = viewingInvoice.gstPercent || 18;
+                  const rateIncl = item.rate;
+                  const rateExcl = item.amount ? (item.amount / qty) : (rateIncl / (1 + (slab / 100)));
                   const amount = item.amount || (rateExcl * qty);
 
                   return (
@@ -461,15 +466,12 @@ export default function Invoices() {
             </table>
 
             {(() => {
-              const itemsTotal = viewingInvoice.items.reduce((sum, item) => sum + item.amount, 0);
-              const grandTotal = viewingInvoice.grandTotal || 0;
-              const gstPercent = viewingInvoice.gstPercent || 18;
-
-              const total = grandTotal > 0 ? grandTotal : (itemsTotal * (1 + gstPercent / 100));
-              const gst = (grandTotal > itemsTotal && itemsTotal > 0)
-                ? (grandTotal - itemsTotal)
-                : (total - itemsTotal);
-              const taxable = total - gst;
+              const taxable = viewingInvoice.items.reduce((sum, item) => sum + item.amount, 0);
+              const grandTotalVal = viewingInvoice.grandTotal || 0;
+              const total = grandTotalVal > 0
+                ? grandTotalVal
+                : viewingInvoice.items.reduce((sum, item) => sum + (item.rate * item.qty), 0);
+              const gst = parseFloat((total - taxable).toFixed(2));
               const isIntraState = isSameStateAsCompany(viewingInvoice.vendorGstin);
 
               return (
